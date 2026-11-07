@@ -2,3 +2,5 @@ fastapi
 uvicorn[standard]
 python-multipart
 pillow
+python-dotenv
+onnxruntime-gpu==1.20.2
