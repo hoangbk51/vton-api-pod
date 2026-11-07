@@ -2,4 +2,3 @@ fastapi
 uvicorn[standard]
 python-multipart
 pillow
-fashn-vton==1.5.*   # kiểm tra tên package/version chính xác trên README của FASHN

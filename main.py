@@ -10,10 +10,13 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 import torch
+from dotenv import load_dotenv
 from fastapi import Depends, FastAPI, File, Form, Header, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from PIL import Image, ImageOps
 from fashn_vton import TryOnPipeline
+
+load_dotenv()
 
 # ---------- Config (đọc từ env) ----------
 API_KEY = os.getenv("API_KEY")
@@ -27,9 +30,9 @@ if not API_KEY:
     raise RuntimeError("Thiếu biến môi trường API_KEY")
 
 ALLOWED_CATEGORIES = {"tops", "bottoms", "one-pieces"}
-ALLOWED_PHOTO_TYPES = {"model", "flat-lay"}   # kiểm tra lại với FASHN 1.5
+ALLOWED_PHOTO_TYPES = {"model", "flat-lay"}
 
-RESULT_NAME_RE = re.compile(r"[0-9a-f]{32}\.png")
+RESULT_NAME_RE = re.compile(r"[0-9a-f]{32}\.jpg")
 log = logging.getLogger("tryon")
 logging.basicConfig(level=logging.INFO)
 
@@ -99,8 +102,10 @@ def run_tryon(person, garment, category, garment_photo_type, num_timesteps, seed
             seed=seed,
             segmentation_free=True,
         )
-    filename = f"{uuid.uuid4().hex}.png"
-    result.images[0].save(OUTPUT_DIR / filename)
+    filename = f"{uuid.uuid4().hex}.jpg"
+    result.images[0].convert("RGB").save(
+        OUTPUT_DIR / filename, format="JPEG", quality=95, subsampling=0
+    )
     return filename
 
 
@@ -159,11 +164,11 @@ async def tryon_raw(
     num_timesteps: int = Form(10),
     seed: int = Form(42),
 ):
-    """Trả thẳng file PNG."""
+    """Trả thẳng file JPEG."""
     filename, _ = await generate(
         person_image, garment_image, category, garment_photo_type, num_timesteps, seed
     )
-    return FileResponse(OUTPUT_DIR / filename, media_type="image/png")
+    return FileResponse(OUTPUT_DIR / filename, media_type="image/jpeg")
 
 
 @app.get("/v1/results/{filename}")
@@ -173,4 +178,4 @@ def get_result(filename: str):
     path = OUTPUT_DIR / filename
     if not path.exists():
         raise HTTPException(404, "Not found")
-    return FileResponse(path, media_type="image/png")
+    return FileResponse(path, media_type="image/jpeg")
